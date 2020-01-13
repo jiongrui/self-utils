@@ -8,7 +8,7 @@
 // 迷宫地图
 const MAZE = [
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
   [0, 1, 0, 0, 0, 1, 0, 1, 0, 0],
   [0, 1, 0, 0, 0, 1, 0, 1, 0, 0],
   [0, 0, 0, 0, 1, 1, 0, 0, 1, 0],
@@ -19,7 +19,7 @@ const MAZE = [
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 ]
 
-export function aSearch(start, end, canvas, sleep) {
+function* aSearch(start, end) {
   // 可到达的格子
   const openList = new Set()
   // 已到达的格子
@@ -33,7 +33,7 @@ export function aSearch(start, end, canvas, sleep) {
     openList.delete(currentGrid)
     // 将当前节点添加到closeList中
     closeList.add(currentGrid)
-    drawRoute(canvas, currentGrid)
+    yield currentGrid.setStep()
 
     const neighbors = findNeighbors(currentGrid, openList, closeList)
 
@@ -68,30 +68,26 @@ function findMinGrid(openList) {
 
 function findNeighbors(grid, openList, closeList) {
   const gridList = new Set()
-  if (isValidGrid(grid.x - 1, grid.y, openList, closeList)) {
+  if (isValidNeighborGrid(grid.x - 1, grid.y, openList, closeList)) {
     gridList.add(new Grid(grid.x - 1, grid.y))
   }
 
-  if (isValidGrid(grid.x + 1, grid.y, openList, closeList)) {
+  if (isValidNeighborGrid(grid.x + 1, grid.y, openList, closeList)) {
     gridList.add(new Grid(grid.x + 1, grid.y))
   }
 
-  if (isValidGrid(grid.x, grid.y - 1, openList, closeList)) {
-    gridList.add(new Grid(grid.x - 1, grid.y))
+  if (isValidNeighborGrid(grid.x, grid.y - 1, openList, closeList)) {
+    gridList.add(new Grid(grid.x, grid.y - 1))
   }
 
-  if (isValidGrid(grid.x, grid.y + 1, openList, closeList)) {
+  if (isValidNeighborGrid(grid.x, grid.y + 1, openList, closeList)) {
     gridList.add(new Grid(grid.x, grid.y + 1))
   }
   return gridList
 }
 
-function isValidGrid(x, y, openList, closeList) {
-  if (x < 0 || x >= MAZE[0].length || y < 0 || y >= MAZE.length) {
-    return false
-  }
-
-  if (MAZE[y][x] === 1) {
+function isValidNeighborGrid(x, y, openList, closeList) {
+  if (!isValidGrid(x, y)) {
     return false
   }
 
@@ -100,6 +96,18 @@ function isValidGrid(x, y, openList, closeList) {
   }
 
   if (containGrid(closeList, x, y)) {
+    return false
+  }
+
+  return true
+}
+
+function isValidGrid(x, y) {
+  if (x < 0 || x >= MAZE[0].length || y < 0 || y >= MAZE.length) {
+    return false
+  }
+
+  if (MAZE[y][x] === 1) {
     return false
   }
 
@@ -117,18 +125,14 @@ function containGrid(gridList, x, y) {
 
 let step = 0
 class Grid {
-  x;
-  y;
-  f;
-  g;
-  h;
-  step;
-  parent;
-
   constructor(x, y) {
     this.x = x
     this.y = y
+  }
+
+  setStep() {
     this.step = ++step
+    return this
   }
 
   initGrid(parent, end) {
@@ -146,40 +150,136 @@ class Grid {
 
 // example
 
-export function example(s, e, canvas, sleep) {
-  drawMap(canvas)
+export default function start(s, e, canvas) {
   const start = new Grid(s.x, s.y)
   const end = new Grid(e.x, e.y)
-  let resultGrid = aSearch(start, end, canvas, sleep)
-  const path = new Set()
-  while (resultGrid) {
-    path.add(new Grid(resultGrid.x, resultGrid.y))
-    resultGrid = resultGrid.parent
+  const canvasCtx = new Canvas(canvas, start, end)
+
+  if (start.x === end.x && start.y === end.y) {
+    return '起点与终点重叠！'
+  }
+
+  if (!isValidGrid(start.x, start.y) && !isValidGrid(end.x, end.y)) {
+    return '起点与终点不可到达！'
+  }
+
+  if (!isValidGrid(start.x, start.y)) {
+    return '起点不可到达！'
+  }
+
+  if (!isValidGrid(end.x, end.y)) {
+    return '终点不可到达！'
+  }
+
+  let search = aSearch(start, end)
+  let result = search.next()
+  console.log('first', result)
+  if (result.value || !result.done) {
+    let duration = 500
+    const timer = () => {
+      setTimeout(() => {
+        result = search.next()
+        canvasCtx.drawStep(result.value)
+        console.log(result)
+        if (!result.done) {
+          timer()
+        } else {
+          canvasCtx.drawPath(getPath(result.value))
+        }
+      }, duration)
+    }
+    timer()
+    return '起点和终点可到达！'
+  } else {
+    console.log('what')
+    return '起点或终点不可到达！'
   }
 }
 
-function drawMap(canvas, path) {
-  let color
-  for (let y = 0; y < MAZE.length; y++) {
-    for (let x = 0; x < MAZE[0].length; x++) {
-      color = '#e5e5e5'
-      if (MAZE[y][x] === 1) {
-        color = '#000'
+function getPath(searchResult) {
+  const path = new Set()
+  while (searchResult) {
+    const newGrid = JSON.parse(JSON.stringify(searchResult))
+    newGrid.parent = null
+    path.add(newGrid)
+    searchResult = searchResult.parent
+  }
+  return path
+}
+
+class Canvas {
+  constructor(canvas, start, end) {
+    step = 0
+    let { width, height } = canvas
+    this.canvas = canvas
+    this.start = start
+    this.end = end
+    this.rectWidth = width / MAZE[0].length
+    this.rectHeight = height / MAZE.length
+    this.halfRectWidth = this.rectWidth / 2
+    this.halfRectHeight = this.rectHeight / 2
+    this.drawMap()
+  }
+
+  drawMap() {
+    let color
+    for (let y = 0; y < MAZE.length; y++) {
+      for (let x = 0; x < MAZE[0].length; x++) {
+        color = '#e5e5e5'
+        if (MAZE[y][x] === 1) {
+          color = '#000'
+        }
+        this.drawCanvas({ x, y }, color)
       }
-      drawCanvas(canvas, { x, y }, color)
+    }
+  }
+
+  drawPath(path) {
+    if (path.size) {
+      for (let grid of path) {
+        this.drawCanvas(grid, 'blue')
+      }
+    }
+  }
+
+  drawStep(grid, color) {
+    this.drawCanvas({ x: grid.x, y: grid.y, step: grid.step }, color)
+  }
+
+  drawCanvas(grid, color) {
+    const ctx = this.canvas.getContext('2d')
+    const { x, y, step } = grid
+    const startX = this.rectWidth * x
+    const startY = this.rectHeight * y
+    const isStart = this.start.x === grid.x && this.start.y === grid.y
+    const isEnd = this.end.x === grid.x && this.end.y === grid.y
+
+    if (isStart || isEnd) {
+      color = 'red'
+    }
+
+    ctx.fillStyle = color || 'green'
+    ctx.fillRect(startX, startY, this.rectWidth, this.rectHeight)
+
+    if (step || isStart || isEnd) {
+      ctx.fillStyle = '#fff'
+      ctx.textBaseline = 'middle'
+      ctx.textAlign = 'center'
+
+      let txt
+      if (isStart) {
+        txt = 'start'
+      } else if (isEnd) {
+        txt = 'end'
+      } else if (step) {
+        txt = step
+      }
+      ctx.fillText(txt, startX + this.halfRectWidth, startY + this.halfRectHeight)
     }
   }
 }
 
-function drawRoute(canvas, grid) {
-  // for (let y = 0; y < MAZE.length; y++) {
-  //   for (let x = 0; x < MAZE[0].length; x++) {
-  drawCanvas(canvas, { x: grid.x, y: grid.y, step: grid.step })
-  //   }
-  // }
-}
-
-// function drawRoute(canvas, path) {
+// function drawStep(canvas, path) {
 //   for (let y = 0; y < MAZE.length; y++) {
 //     for (let x = 0; x < MAZE[0].length; x++) {
 //       if (path && containGrid(path, x, y)) {
@@ -194,27 +294,3 @@ function drawRoute(canvas, grid) {
 //     }
 //   }
 // }
-
-function drawCanvas(canvas, grid, color) {
-  const ctx = canvas.getContext('2d')
-  const { x, y, step } = grid
-  let { width, height } = canvas
-  // width = width * 2
-  const rectWidth = width / MAZE[0].length
-  const rectHeight = height / MAZE.length
-  const halfRectWidth = width / 2
-  const halfRectHeight = height / 2
-  const startX = rectWidth * x
-  const startY = rectHeight * y
-
-  ctx.fillStyle = color || 'green'
-  ctx.fillRect(startX, startY, rectWidth, rectHeight)
-
-  if (step) {
-    ctx.fillStyle = '#fff'
-    ctx.textBaseline = 'middle'
-    ctx.textAlign = 'center'
-    ctx.fillText(step, startX + halfRectWidth, startY + halfRectHeight)
-    console.log(step, startX + halfRectWidth, startY + halfRectHeight)
-  }
-}
