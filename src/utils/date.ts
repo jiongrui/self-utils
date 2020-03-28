@@ -1,10 +1,5 @@
 
-/**
- *
- * @param  date
- * @return boolean true/false
- */
-function isValidDate(date: any): boolean {
+export function isValidDate(date: any): boolean {
     if (Object.prototype.toString.call(date) === '[object Date]') {
         // it is a date
         if (isNaN(date.getTime())) {
@@ -19,11 +14,6 @@ function isValidDate(date: any): boolean {
     return false
 }
 
-/**
- * @param date 日期， 只支持 日期格式
- * @param fmt  期望的日期格式，如： yyyy-MM-dd hh:mm:ss => 2019-11-25 12:12:30
- * @return 格式化后的日期： 2019-11-25 12:12:30
- */
 function format(date: Date, fmt: string): string {
     if (!isValidDate(date)) {
         return '--'
@@ -53,14 +43,7 @@ function format(date: Date, fmt: string): string {
     return fmt
 }
 
-
-/**
- *
- * @param date 日期，支持 日期、时间戳、字符串格式
- * @param fmt  期望的日期格式，如： yyyy-MM-dd hh:mm:ss => 2019-11-25 12:12:30
- * @return 格式化后的日期： 2019-11-25 12:12:30
- */
-function formatDate(date: Date | number | string, fmt?: string): string | Date {
+export function formatDate(date: Date | number | string, fmt?: string): string | Date {
     fmt = fmt || 'yyyy-MM-dd'
 
     if (!date) {
@@ -91,11 +74,3 @@ function formatDate(date: Date | number | string, fmt?: string): string | Date {
 
     return format(date, fmt)
 }
-export {
-    formatDate,
-    isValidDate
-}
-// module.exports = {
-//     formatDate,
-//     isValidDate
-// }
