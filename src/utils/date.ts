@@ -43,7 +43,7 @@ function format(date: Date, fmt: string): string {
     return fmt
 }
 
-export function formatDate(date: Date | number | string, fmt?: string): string | Date {
+export function formatDate(date: Date | number | string, fmt?: string): string {
     fmt = fmt || 'yyyy-MM-dd'
 
     if (!date) {
