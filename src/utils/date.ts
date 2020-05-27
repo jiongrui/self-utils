@@ -65,7 +65,7 @@ export function formatDate(date: Date | number | string, fmt?: string): string {
                 h = dateStr.substring(8, 10) || 0
                 m = dateStr.substring(10, 12) || 0
                 s = dateStr.substring(12, 14) || 0
-                date = new Date(`${y}-${M}-${d} ${h}:${m}:${s}`)
+                date = new Date(`${y}/${M}/${d} ${h}:${m}:${s}`)
             } else {
                 return '--'
             }
