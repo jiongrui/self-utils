@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from "util";
+
 export const copyTextToClipboard = (value: string) => {
   var textArea = document.createElement("textarea");
   textArea.style.background = 'transparent';
@@ -27,4 +29,28 @@ export const trim = (str: string, type: number) => {
     default:
       return str;
   }
+}
+
+export function isEqual(a: any, b: any) {
+  return a === b
+}
+
+// 获取url的全部参数键值对或某个参数值
+export function getUrlParams(url: string, key: string) {
+  if (isEqual(url.indexOf('?'), -1)) {
+    return key ? undefined : {}
+  }
+  const params: any = {}
+  const paramStr = url.split('?')[1]
+  const paramArr = paramStr.split('&')
+  paramArr.forEach(item => {
+    const [key1, value1] = item.split('=')
+    if (value1.indexOf(',') > -1) {
+      const value2 = value1.split(',')
+      params[key1] = value2
+    } else {
+      params[key1] = value1
+    }
+  })
+  return key ? params[key] : params
 }
